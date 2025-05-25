@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +9,7 @@ import { PreviewPanel } from './PreviewPanel';
 import { ProjectStorage } from '@/utils/projectStorage';
 import { Project, File } from '@/types/project';
 import { getFileType } from '@/utils/fileUtils';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Menu, 
   FolderOpen, 
@@ -19,7 +19,9 @@ import {
   Sun, 
   Settings,
   ArrowLeft,
-  Download
+  Download,
+  LogOut,
+  User
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +34,7 @@ export const MobileCodeEditor: React.FC = () => {
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showFileExplorer, setShowFileExplorer] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -56,6 +59,14 @@ export const MobileCodeEditor: React.FC = () => {
         description: "Project saved successfully"
       });
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been signed out successfully"
+    });
   };
 
   const handleFileContentChange = (content: string) => {
@@ -196,7 +207,7 @@ export const MobileCodeEditor: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="text-sm text-gray-500">Mobile Code Editor</div>
+              <div className="text-sm text-gray-500">TouchCode - {user?.email}</div>
             )}
           </div>
           
@@ -225,6 +236,9 @@ export const MobileCodeEditor: React.FC = () => {
             >
               {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -234,7 +248,8 @@ export const MobileCodeEditor: React.FC = () => {
             <div className="h-full flex items-center justify-center">
               <div className="text-center p-4">
                 <FolderOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h2 className="text-xl font-semibold mb-2">Welcome to Mobile Code Editor</h2>
+                <h2 className="text-xl font-semibold mb-2">Welcome to TouchCode</h2>
+                <p className="text-gray-600 mb-2">Signed in as: {user?.email}</p>
                 <p className="text-gray-600 mb-4">A full-featured code editor for your phone</p>
                 <Button onClick={() => setShowProjectManager(true)}>
                   Open Project Manager
@@ -319,6 +334,19 @@ export const MobileCodeEditor: React.FC = () => {
             />
           </>
         )}
+        
+        {/* User info and sign out */}
+        <div className="mt-auto p-3 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <User className="h-4 w-4" />
+              <span className="truncate">{user?.email}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
@@ -391,14 +419,17 @@ export const MobileCodeEditor: React.FC = () => {
           <div className="h-full flex items-center justify-center">
             <div className="text-center p-8">
               <FolderOpen className="h-24 w-24 mx-auto text-gray-400 mb-6" />
-              <h1 className="text-3xl font-bold mb-4">Mobile Code Editor</h1>
-              <p className="text-xl text-gray-600 mb-6">
-                A powerful code editor designed for mobile development
+              <h1 className="text-3xl font-bold mb-4">TouchCode</h1>
+              <p className="text-xl text-gray-600 mb-2">
+                Welcome, {user?.email}!
+              </p>
+              <p className="text-lg text-gray-600 mb-6">
+                Your mobile code editor is ready
               </p>
               <div className="space-y-2 text-sm text-gray-500 mb-6">
                 <p>✨ Touch-optimized Monaco Editor</p>
                 <p>📱 Responsive design for all devices</p>
-                <p>💾 Local storage project management</p>
+                <p>💾 Cloud storage with local backup</p>
                 <p>👀 Live preview for web projects</p>
                 <p>📦 Import/export functionality</p>
               </div>
