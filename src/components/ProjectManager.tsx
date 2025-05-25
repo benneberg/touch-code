@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ProjectStorage } from '@/utils/projectStorage';
+import { SupabaseProjectStorage } from '@/utils/supabaseProjectStorage';
+import { supabase } from '@/integrations/supabase/client';
 import { Project, ProjectMetadata } from '@/types/project';
-import { Plus, Folder, Trash2, Download, Upload, Calendar, FileText } from 'lucide-react';
+import { Plus, Folder, Trash2, Download, Upload, Calendar, FileText, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface ProjectManagerProps {
@@ -21,19 +22,50 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadProjects();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('projects-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects'
+        },
+        () => {
+          loadProjects();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const loadProjects = () => {
-    const projectMetadata = ProjectStorage.getAllMetadata();
-    setProjects(projectMetadata.sort((a, b) => 
-      new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
-    ));
+  const loadProjects = async () => {
+    setLoading(true);
+    const { data, error } = await SupabaseProjectStorage.getAllMetadata();
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load projects",
+        variant: "destructive"
+      });
+      console.error('Error loading projects:', error);
+    } else {
+      setProjects(data);
+    }
+    setLoading(false);
   };
 
-  const createProject = () => {
+  const createProject = async () => {
     if (!newProjectName.trim()) {
       toast({
         title: "Error",
@@ -44,7 +76,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
     }
 
     const project: Project = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: newProjectName.trim(),
       description: newProjectDescription.trim() || undefined,
       files: [],
@@ -52,12 +84,22 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
       lastModified: new Date()
     };
 
-    ProjectStorage.saveProject(project);
+    const { error } = await SupabaseProjectStorage.saveProject(project);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create project",
+        variant: "destructive"
+      });
+      console.error('Error creating project:', error);
+      return;
+    }
+
     onCreateProject(project);
     setNewProjectName('');
     setNewProjectDescription('');
     setShowCreateDialog(false);
-    loadProjects();
     
     toast({
       title: "Success",
@@ -65,23 +107,36 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
     });
   };
 
-  const openProject = (id: string) => {
-    const project = ProjectStorage.getProject(id);
-    if (project) {
-      onSelectProject(project);
-    } else {
+  const openProject = async (id: string) => {
+    const { data: project, error } = await SupabaseProjectStorage.getProject(id);
+    
+    if (error || !project) {
       toast({
         title: "Error",
-        description: "Project not found",
+        description: "Failed to load project",
         variant: "destructive"
       });
+      console.error('Error loading project:', error);
+      return;
     }
+
+    onSelectProject(project);
   };
 
-  const deleteProject = (id: string, name: string) => {
+  const deleteProject = async (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      ProjectStorage.deleteProject(id);
-      loadProjects();
+      const { error } = await SupabaseProjectStorage.deleteProject(id);
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete project",
+          variant: "destructive"
+        });
+        console.error('Error deleting project:', error);
+        return;
+      }
+
       toast({
         title: "Success",
         description: "Project deleted successfully"
@@ -89,23 +144,31 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
     }
   };
 
-  const exportProject = (id: string) => {
-    const project = ProjectStorage.getProject(id);
-    if (project) {
-      const dataStr = ProjectStorage.exportProject(project);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${project.name}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      
+  const exportProject = async (id: string) => {
+    const { data: project, error } = await SupabaseProjectStorage.getProject(id);
+    
+    if (error || !project) {
       toast({
-        title: "Success",
-        description: "Project exported successfully"
+        title: "Error",
+        description: "Failed to load project for export",
+        variant: "destructive"
       });
+      return;
     }
+
+    const dataStr = SupabaseProjectStorage.exportProject(project);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${project.name}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Success",
+      description: "Project exported successfully"
+    });
   };
 
   const importProject = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,15 +176,23 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const jsonString = e.target?.result as string;
-        const project = ProjectStorage.importProject(jsonString);
-        project.id = Date.now().toString(); // Generate new ID
+        const project = SupabaseProjectStorage.importProject(jsonString);
+        project.id = crypto.randomUUID(); // Generate new ID
         project.lastModified = new Date();
         
-        ProjectStorage.saveProject(project);
-        loadProjects();
+        const { error } = await SupabaseProjectStorage.saveProject(project);
+        
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Failed to import project",
+            variant: "destructive"
+          });
+          return;
+        }
         
         toast({
           title: "Success",
@@ -199,7 +270,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject,
         </div>
       </div>
 
-      {projects.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading projects...</span>
+        </div>
+      ) : projects.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <Folder className="h-12 w-12 mx-auto text-gray-400 mb-4" />

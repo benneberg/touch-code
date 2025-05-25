@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,8 @@ import { ProjectManager } from './ProjectManager';
 import { FileExplorer } from './FileExplorer';
 import { CodeEditor } from './CodeEditor';
 import { PreviewPanel } from './PreviewPanel';
-import { ProjectStorage } from '@/utils/projectStorage';
+import { SupabaseProjectStorage } from '@/utils/supabaseProjectStorage';
+import { supabase } from '@/integrations/supabase/client';
 import { Project, File } from '@/types/project';
 import { getFileType } from '@/utils/fileUtils';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,7 +23,8 @@ import {
   ArrowLeft,
   Download,
   LogOut,
-  User
+  User,
+  Loader2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -34,6 +37,7 @@ export const MobileCodeEditor: React.FC = () => {
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showFileExplorer, setShowFileExplorer] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { user, signOut } = useAuth();
 
   useEffect(() => {
@@ -46,19 +50,68 @@ export const MobileCodeEditor: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const saveProject = () => {
-    if (currentProject) {
-      const updatedProject = {
-        ...currentProject,
-        lastModified: new Date()
-      };
-      ProjectStorage.saveProject(updatedProject);
+  useEffect(() => {
+    if (!currentProject) return;
+
+    // Set up real-time subscription for the current project
+    const channel = supabase
+      .channel(`project-${currentProject.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'projects',
+          filter: `id=eq.${currentProject.id}`
+        },
+        async (payload) => {
+          // Reload project data when it's updated by another client
+          const { data: updatedProject } = await SupabaseProjectStorage.getProject(currentProject.id);
+          if (updatedProject) {
+            setCurrentProject(updatedProject);
+            // Update active file if it still exists
+            if (activeFile) {
+              const updatedFile = updatedProject.files.find(f => f.id === activeFile.id);
+              if (updatedFile) {
+                setActiveFile(updatedFile);
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentProject?.id, activeFile?.id]);
+
+  const saveProject = async () => {
+    if (!currentProject) return;
+
+    setSaving(true);
+    const updatedProject = {
+      ...currentProject,
+      lastModified: new Date()
+    };
+
+    const { error } = await SupabaseProjectStorage.saveProject(updatedProject);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save project",
+        variant: "destructive"
+      });
+      console.error('Error saving project:', error);
+    } else {
       setCurrentProject(updatedProject);
       toast({
         title: "Success",
         description: "Project saved successfully"
       });
     }
+    setSaving(false);
   };
 
   const handleSignOut = async () => {
@@ -133,10 +186,10 @@ export const MobileCodeEditor: React.FC = () => {
     setShowProjectManager(false);
   };
 
-  const exportProject = () => {
+  const exportProject = async () => {
     if (!currentProject) return;
     
-    const dataStr = ProjectStorage.exportProject(currentProject);
+    const dataStr = SupabaseProjectStorage.exportProject(currentProject);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -214,8 +267,13 @@ export const MobileCodeEditor: React.FC = () => {
           <div className="flex items-center gap-1">
             {currentProject && (
               <>
-                <Button variant="ghost" size="sm" onClick={saveProject}>
-                  <Save className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={saveProject}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={exportProject}>
                   <Download className="h-4 w-4" />
@@ -308,8 +366,13 @@ export const MobileCodeEditor: React.FC = () => {
                   Back
                 </Button>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={saveProject}>
-                    <Save className="h-4 w-4" />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={saveProject}
+                    disabled={saving}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={exportProject}>
                     <Download className="h-4 w-4" />
@@ -429,9 +492,10 @@ export const MobileCodeEditor: React.FC = () => {
               <div className="space-y-2 text-sm text-gray-500 mb-6">
                 <p>✨ Touch-optimized Monaco Editor</p>
                 <p>📱 Responsive design for all devices</p>
-                <p>💾 Cloud storage with local backup</p>
+                <p>💾 Cloud storage with Supabase</p>
                 <p>👀 Live preview for web projects</p>
                 <p>📦 Import/export functionality</p>
+                <p>🔄 Real-time collaboration ready</p>
               </div>
             </div>
           </div>
