@@ -40,7 +40,7 @@ const Index = () => {
             <div className="grid gap-4 text-center">
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Features</h3>
-                <div className="grid gap-2 text-sm text-gray-600">
+                <div className="grid gap-2 text-sm text-gray-600 text-left">
                   <p>✨ Touch-optimized Monaco Editor</p>
                   <p>📱 Responsive design for all devices</p>
                   <p>💾 Cloud storage with local backup</p>
