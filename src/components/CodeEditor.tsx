@@ -75,7 +75,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex-1 relative overflow-hidden">
       <Editor
         height="100%"
         language={fileType.language}
