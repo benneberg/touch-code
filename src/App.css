@@ -67,13 +67,26 @@ body {
   -ms-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* Prevents zoom but allows taps */
 }
 
-/* Allow text selection only in editor and input areas */
-input, textarea, [contenteditable], .monaco-editor * {
+/* Allow text selection and proper touch behavior in editor and input areas */
+input, textarea, [contenteditable], .monaco-editor *, .monaco-editor {
   -webkit-user-select: text !important;
   -khtml-user-select: text !important;
   -moz-user-select: text !important;
   -ms-user-select: text !important;
   user-select: text !important;
+  touch-action: pan-y pan-x !important; /* Allow panning but prevent zoom */
+}
+
+/* Specific handling for Monaco Editor container */
+.monaco-editor .view-lines {
+  touch-action: pan-y pan-x !important;
+}
+
+/* Prevent zoom gestures globally */
+html {
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;
 }

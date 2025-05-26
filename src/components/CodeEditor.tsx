@@ -17,7 +17,46 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   theme = 'light'
 }) => {
   const editorRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const fileType = getFileType(filename);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Prevent zoom on touch devices
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault(); // Prevent pinch zoom
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const now = Date.now();
+      const timeSinceLastTouch = now - (container as any).lastTouchTime || 0;
+      
+      if (timeSinceLastTouch < 300 && timeSinceLastTouch > 0) {
+        e.preventDefault(); // Prevent double-tap zoom
+      }
+      
+      (container as any).lastTouchTime = now;
+    };
+
+    const handleGestureStart = (e: Event) => {
+      e.preventDefault(); // Prevent gesture-based zooming
+    };
+
+    // Add touch event listeners
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: false });
+    container.addEventListener('gesturestart', handleGestureStart, { passive: false });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('gesturestart', handleGestureStart);
+    };
+  }, []);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
@@ -66,6 +105,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         formatOnType: true
       });
     }
+
+    // Add additional touch event handling to the editor DOM
+    const editorDom = editor.getDomNode();
+    if (editorDom) {
+      editorDom.style.touchAction = 'pan-y pan-x'; // Only allow panning, no zoom
+    }
   };
 
   const handleChange = (newValue: string | undefined) => {
@@ -75,7 +120,19 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="h-full w-full flex-1 relative overflow-hidden touch-pan-y">
+    <div 
+      ref={containerRef}
+      className="h-full w-full flex-1 relative overflow-hidden"
+      style={{ 
+        touchAction: 'pan-y pan-x',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        KhtmlUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
+        userSelect: 'none'
+      }}
+    >
       <Editor
         height="100%"
         language={fileType.language}
