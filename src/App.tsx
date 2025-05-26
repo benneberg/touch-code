@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,29 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import { registerSW } from 'virtual:pwa-register';
 import UpdateNotifier from './components/UpdateNotifier';
-
-function App() {
-  return (
-    <>
-      {/* Your existing app components */}
-      
-      <UpdateNotifier />
-    </>
-  );
-}
-
-
-const updateSW = registerSW({
-  onNeedRefresh() {
-    console.log('New content available, refresh to update.');
-    // Optionally notify user to refresh
-  },
-  onOfflineReady() {
-    console.log('App ready to work offline');
-  },
-});
 
 const queryClient = new QueryClient();
 
@@ -49,6 +26,7 @@ const App = () => (
           </Routes>
         </AuthProvider>
       </BrowserRouter>
+      <UpdateNotifier />
     </TooltipProvider>
   </QueryClientProvider>
 );
