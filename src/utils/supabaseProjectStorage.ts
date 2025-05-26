@@ -1,6 +1,24 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Project, ProjectMetadata } from '@/types/project';
+import { Project, ProjectMetadata, File } from '@/types/project';
+
+// Helper function to convert File to JSON-serializable format
+const fileToJson = (file: File) => ({
+  id: file.id,
+  name: file.name,
+  content: file.content,
+  type: file.type,
+  lastModified: file.lastModified.toISOString()
+});
+
+// Helper function to convert JSON back to File
+const jsonToFile = (json: any): File => ({
+  id: json.id,
+  name: json.name,
+  content: json.content,
+  type: json.type,
+  lastModified: new Date(json.lastModified)
+});
 
 export class SupabaseProjectStorage {
   static async saveProject(project: Project): Promise<{ error?: any }> {
@@ -15,7 +33,7 @@ export class SupabaseProjectStorage {
         user_id: user.id,
         name: project.name,
         description: project.description,
-        files: project.files,
+        files: project.files.map(fileToJson),
         main_file: project.mainFile,
         updated_at: new Date().toISOString()
       };
@@ -46,11 +64,15 @@ export class SupabaseProjectStorage {
         return { data: null };
       }
 
+      const files = Array.isArray(data.files) 
+        ? data.files.map(jsonToFile)
+        : [];
+
       const project: Project = {
         id: data.id,
         name: data.name,
         description: data.description,
-        files: data.files || [],
+        files,
         createdAt: new Date(data.created_at),
         lastModified: new Date(data.updated_at),
         mainFile: data.main_file
@@ -73,15 +95,21 @@ export class SupabaseProjectStorage {
         return { data: [], error };
       }
 
-      const projects: Project[] = data.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        files: item.files || [],
-        createdAt: new Date(item.created_at),
-        lastModified: new Date(item.updated_at),
-        mainFile: item.main_file
-      }));
+      const projects: Project[] = data.map(item => {
+        const files = Array.isArray(item.files) 
+          ? item.files.map(jsonToFile)
+          : [];
+
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          files,
+          createdAt: new Date(item.created_at),
+          lastModified: new Date(item.updated_at),
+          mainFile: item.main_file
+        };
+      });
 
       return { data: projects };
     } catch (error) {
@@ -113,14 +141,18 @@ export class SupabaseProjectStorage {
         return { data: [], error };
       }
 
-      const metadata: ProjectMetadata[] = data.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        createdAt: new Date(item.created_at),
-        lastModified: new Date(item.updated_at),
-        fileCount: (item.files || []).length
-      }));
+      const metadata: ProjectMetadata[] = data.map(item => {
+        const fileCount = Array.isArray(item.files) ? item.files.length : 0;
+
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          createdAt: new Date(item.created_at),
+          lastModified: new Date(item.updated_at),
+          fileCount
+        };
+      });
 
       return { data: metadata };
     } catch (error) {
@@ -133,6 +165,26 @@ export class SupabaseProjectStorage {
   }
 
   static importProject(jsonString: string): Project {
-    return JSON.parse(jsonString);
+    const parsed = JSON.parse(jsonString);
+    
+    // Convert date strings back to Date objects if needed
+    if (typeof parsed.createdAt === 'string') {
+      parsed.createdAt = new Date(parsed.createdAt);
+    }
+    if (typeof parsed.lastModified === 'string') {
+      parsed.lastModified = new Date(parsed.lastModified);
+    }
+    
+    // Convert file lastModified strings back to Date objects
+    if (Array.isArray(parsed.files)) {
+      parsed.files = parsed.files.map((file: any) => ({
+        ...file,
+        lastModified: typeof file.lastModified === 'string' 
+          ? new Date(file.lastModified) 
+          : file.lastModified
+      }));
+    }
+    
+    return parsed;
   }
 }
