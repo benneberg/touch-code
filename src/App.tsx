@@ -8,17 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import { registerSW } from 'virtual:pwa-register';
 
-const updateSW = registerSW({
-  onNeedRefresh() {
-    console.log('New content available, refresh to update.');
-    // Optionally notify user to refresh
-  },
-  onOfflineReady() {
-    console.log('App ready to work offline');
-  },
-});
 const queryClient = new QueryClient();
 
 const App = () => (
