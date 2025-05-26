@@ -64,97 +64,101 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onSignOut
 }) => {
   return (
-  <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 shadow-md px-6 py-3 flex items-center justify-between">
-    <div className="bg-white border-b p-2 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Sheet open={showProjectManager} onOpenChange={onShowProjectManager}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <Menu className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-full p-0">
-            <ProjectManager
-              onSelectProject={onSelectProject}
-              onCreateProject={onCreateProject}
-            />
-          </SheetContent>
-        </Sheet>
-        
-        {currentProject && (
-          <Sheet open={showFileExplorer} onOpenChange={onShowFileExplorer}>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 shadow-md">
+      <div className="bg-white border-b p-2 flex items-center justify-between touch-none">
+        <div className="flex items-center gap-2">
+          <Sheet open={showProjectManager} onOpenChange={onShowProjectManager}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="sm">
-                <FolderOpen className="h-4 w-4" />
+                <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-80 p-0">
-              <FileExplorer
-                files={currentProject.files}
-                activeFileId={activeFile?.id || null}
-                onSelectFile={(file) => {
-                  onSelectFile(file);
-                  onShowFileExplorer(false);
-                }}
-                onCreateFile={onCreateFile}
-                onDeleteFile={onDeleteFile}
-              />
+            <SheetContent side="left" className="w-full p-0 overflow-hidden">
+              <div className="h-full overflow-y-auto overscroll-contain">
+                <ProjectManager
+                  onSelectProject={onSelectProject}
+                  onCreateProject={onCreateProject}
+                />
+              </div>
             </SheetContent>
           </Sheet>
-        )}
+          
+          {currentProject && (
+            <Sheet open={showFileExplorer} onOpenChange={onShowFileExplorer}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0 overflow-hidden">
+                <div className="h-full overflow-y-auto overscroll-contain">
+                  <FileExplorer
+                    files={currentProject.files}
+                    activeFileId={activeFile?.id || null}
+                    onSelectFile={(file) => {
+                      onSelectFile(file);
+                      onShowFileExplorer(false);
+                    }}
+                    onCreateFile={onCreateFile}
+                    onDeleteFile={onDeleteFile}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+        </div>
+        
+        <div className="flex-1 text-center">
+          {currentProject ? (
+            <div>
+              <div className="font-medium text-sm">{currentProject.name}</div>
+              {activeFile && (
+                <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+                  <span>{getFileType(activeFile.name).icon}</span>
+                  <span>{activeFile.name}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">TouchCode - {userEmail}</div>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-1">
+          {currentProject && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onSaveProject}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onExportProject}>
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onTogglePreview}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onToggleTheme}
+          >
+            {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onSignOut}>
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      
-      <div className="flex-1 text-center">
-        {currentProject ? (
-          <div>
-            <div className="font-medium text-sm">{currentProject.name}</div>
-            {activeFile && (
-              <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
-                <span>{getFileType(activeFile.name).icon}</span>
-                <span>{activeFile.name}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-sm text-gray-500">TouchCode - {userEmail}</div>
-        )}
-      </div>
-      
-      <div className="flex items-center gap-1">
-        {currentProject && (
-          <>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onSaveProject}
-              disabled={saving}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onExportProject}>
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onTogglePreview}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onToggleTheme}
-        >
-          {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onSignOut}>
-          <LogOut className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-   </header>
+    </header>
   );
 };

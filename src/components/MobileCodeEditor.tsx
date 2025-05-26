@@ -191,7 +191,7 @@ export const MobileCodeEditor: React.FC = () => {
   // Mobile layout
   if (isMobile) {
     return (
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="h-screen w-screen flex flex-col bg-gray-50 overflow-hidden relative">
         <MobileHeader
           currentProject={currentProject}
           activeFile={activeFile}
@@ -216,15 +216,17 @@ export const MobileCodeEditor: React.FC = () => {
         />
 
         {/* Content */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative mt-16 overflow-hidden">
           {!currentProject ? (
-            <WelcomeScreen 
-              userEmail={user?.email}
-              isMobile={true}
-              onOpenProjectManager={() => setShowProjectManager(true)}
-            />
+            <div className="h-full overflow-y-auto overscroll-contain">
+              <WelcomeScreen 
+                userEmail={user?.email}
+                isMobile={true}
+                onOpenProjectManager={() => setShowProjectManager(true)}
+              />
+            </div>
           ) : !activeFile ? (
-            <div className="h-full flex items-center justify-center">
+            <div className="h-full flex items-center justify-center overflow-hidden">
               <div className="text-center p-4">
                 <p className="text-gray-600 mb-4">No file selected</p>
                 <Button onClick={() => setShowFileExplorer(true)}>
@@ -233,18 +235,22 @@ export const MobileCodeEditor: React.FC = () => {
               </div>
             </div>
           ) : showPreview ? (
-            <PreviewPanel
-              files={currentProject.files}
-              isVisible={true}
-              onToggleVisibility={() => setShowPreview(false)}
-            />
+            <div className="h-full overflow-hidden">
+              <PreviewPanel
+                files={currentProject.files}
+                isVisible={true}
+                onToggleVisibility={() => setShowPreview(false)}
+              />
+            </div>
           ) : (
-            <CodeEditor
-              value={activeFile.content}
-              onChange={handleFileContentChange}
-              filename={activeFile.name}
-              theme={theme}
-            />
+            <div className="h-full overflow-hidden">
+              <CodeEditor
+                value={activeFile.content}
+                onChange={handleFileContentChange}
+                filename={activeFile.name}
+                theme={theme}
+              />
+            </div>
           )}
         </div>
       </div>

@@ -22,7 +22,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
     
-    // Configure editor for mobile
+    // Configure editor for mobile with disabled zoom
     editor.updateOptions({
       fontSize: 14,
       lineHeight: 22,
@@ -38,7 +38,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       roundedSelection: false,
       readOnly: false,
       cursorStyle: 'line',
-      mouseWheelZoom: true,
+      mouseWheelZoom: false, // Disable zoom
       contextmenu: true,
       scrollbar: {
         vertical: 'auto',
@@ -75,7 +75,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="h-full w-full flex-1 relative overflow-hidden">
+    <div className="h-full w-full flex-1 relative overflow-hidden touch-pan-y">
       <Editor
         height="100%"
         language={fileType.language}
@@ -94,7 +94,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           wordWrap: 'on',
           fontSize: 14,
           lineHeight: 22,
-          padding: { top: 10, bottom: 10 }
+          padding: { top: 10, bottom: 10 },
+          mouseWheelZoom: false, // Disable zoom
+          overviewRulerLanes: 0
         }}
       />
     </div>
