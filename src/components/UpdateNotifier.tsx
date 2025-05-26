@@ -1,67 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { registerSW } from 'virtual:pwa-register';
+import React, { useEffect, useState } from "react";
+import { registerSW } from "virtual:pwa-register";
 
 const UpdateNotifier: React.FC = () => {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
   const [updateServiceWorker, setUpdateServiceWorker] = useState<() => void>();
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const updateSW = registerSW({
       onNeedRefresh() {
         setNeedRefresh(true);
+        setVisible(true);
       },
       onOfflineReady() {
         setOfflineReady(true);
+        setVisible(true);
+
+        // Hide offline ready notification after 3 seconds
+        setTimeout(() => {
+          setVisible(false);
+          setOfflineReady(false);
+        }, 3000);
       },
     });
+
     setUpdateServiceWorker(() => updateSW);
   }, []);
 
   const handleRefresh = () => {
     if (updateServiceWorker) {
-      updateServiceWorker(); // This triggers the new SW to take over and reloads page
+      updateServiceWorker();
     }
   };
 
-  if (!needRefresh && !offlineReady) return null;
+  if (!visible) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 20,
-      left: '50%',
-      transform: 'translateX(-50%)',
-      backgroundColor: '#333',
-      color: '#fff',
-      padding: '1em 2em',
-      borderRadius: 8,
-      boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-      zIndex: 1000,
-      maxWidth: '90vw',
-      textAlign: 'center',
-    }}>
+    <div
+      className="
+        fixed bottom-6 left-1/2 transform -translate-x-1/2
+        bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg
+        flex flex-col items-center space-y-2
+        transition-opacity duration-500 opacity-100
+      "
+      style={{ zIndex: 1000 }}
+    >
       {needRefresh ? (
         <>
-          <div>New version available!</div>
+          <span className="font-semibold">New version available!</span>
           <button
             onClick={handleRefresh}
-            style={{
-              marginTop: 8,
-              padding: '0.5em 1em',
-              backgroundColor: '#06f',
-              border: 'none',
-              borderRadius: 4,
-              color: '#fff',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
+            className="
+              mt-1 px-4 py-1 bg-blue-600 rounded hover:bg-blue-700
+              transition duration-300
+            "
           >
             Refresh
           </button>
         </>
       ) : (
-        <div>App is ready to work offline.</div>
+        <span>App is ready to work offline.</span>
       )}
     </div>
   );
