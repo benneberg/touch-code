@@ -1,10 +1,10 @@
-# Welcome to your Lovable project
+# This repository is part of a project for testing and prototyping different approaches on code editors for touch devices.
 
 ## Project info
 
 **URL**: https://lovable.dev/projects/0c262291-97ab-4997-b822-76837fa68cc4
 
-## How can I edit this code?
+## How can I edit the code if it is hosted and built in lovable?
 
 There are several ways of editing your application.
 
