@@ -9,6 +9,18 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { registerSW } from 'virtual:pwa-register';
+import UpdateNotifier from './components/UpdateNotifier';
+
+function App() {
+  return (
+    <>
+      {/* Your existing app components */}
+      
+      <UpdateNotifier />
+    </>
+  );
+}
+
 
 const updateSW = registerSW({
   onNeedRefresh() {
